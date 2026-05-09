@@ -1,0 +1,746 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: AI Health Assistant API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: reports
+    description: Medical report analysis
+  - name: imageAnalysis
+    description: Face/image analysis
+  - name: diet
+    description: Diet suggestions
+  - name: chat
+    description: AI chat assistant
+  - name: notifications
+    description: Push notification subscriptions
+  - name: history
+    description: Analysis history
+  - name: summary
+    description: Dashboard summaries
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reports/analyze:
+    post:
+      operationId: analyzeReport
+      tags: [reports]
+      summary: Analyze a medical report (PDF or image)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                userId:
+                  type: string
+              required: [file, userId]
+      responses:
+        "200":
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportAnalysis"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /image/analyze:
+    post:
+      operationId: analyzeImage
+      tags: [imageAnalysis]
+      summary: Analyze a face/body image for wellness hints
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                userId:
+                  type: string
+              required: [file, userId]
+      responses:
+        "200":
+          description: Image analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImageAnalysis"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /diet/suggest:
+    post:
+      operationId: getDietSuggestions
+      tags: [diet]
+      summary: Get AI diet suggestions based on report or user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DietSuggestionBody"
+      responses:
+        "200":
+          description: Diet plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DietPlan"
+
+  /history:
+    get:
+      operationId: getHistory
+      tags: [history]
+      summary: Get user's analysis history
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [report, image, diet, all]
+            default: all
+      responses:
+        "200":
+          description: History list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryList"
+
+    delete:
+      operationId: clearHistory
+      tags: [history]
+      summary: Clear all history for a user
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: History cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /history/{id}:
+    get:
+      operationId: getHistoryItem
+      tags: [history]
+      summary: Get a specific history item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: History item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistoryItem"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /summary/dashboard:
+    get:
+      operationId: getDashboardSummary
+      tags: [summary]
+      summary: Get dashboard stats and recent activity
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /notifications/subscribe:
+    post:
+      operationId: subscribePush
+      tags: [notifications]
+      summary: Subscribe to push notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushSubscribeBody"
+      responses:
+        "200":
+          description: Subscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/unsubscribe:
+    post:
+      operationId: unsubscribePush
+      tags: [notifications]
+      summary: Unsubscribe from push notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushUnsubscribeBody"
+      responses:
+        "200":
+          description: Unsubscribed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/vapid-public-key:
+    get:
+      operationId: getVapidPublicKey
+      tags: [notifications]
+      summary: Get the VAPID public key for push subscription
+      responses:
+        "200":
+          description: VAPID public key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VapidKeyResponse"
+
+  /chat/message:
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a message to the AI health chat assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendChatMessageBody"
+      responses:
+        "200":
+          description: AI reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+
+  /reports/{id}/pdf:
+    get:
+      operationId: generateReportPdf
+      tags: [reports]
+      summary: Generate a downloadable PDF report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: PDF generation result with download URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PdfReport"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required: [error]
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    RegisterBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        name:
+          type: string
+      required: [email, password, name]
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required: [user, token]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, email, name, createdAt]
+
+    ConfidenceLevel:
+      type: string
+      enum: [high, medium, low]
+
+    ReportValue:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        unit:
+          type: string
+        status:
+          type: string
+          enum: [normal, high, low, critical]
+        normalRange:
+          type: string
+      required: [name, value, status]
+
+    ReportAnalysis:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        fileName:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 100
+        confidenceLevel:
+          $ref: "#/components/schemas/ConfidenceLevel"
+        values:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportValue"
+        possibleConditions:
+          type: array
+          items:
+            type: string
+        explanation:
+          type: string
+        emergencyAlert:
+          type: boolean
+        emergencyMessage:
+          type: string
+        disclaimer:
+          type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, confidence, confidenceLevel, values, possibleConditions, explanation, emergencyAlert, disclaimer, createdAt]
+
+    ImageAnalysisResult:
+      type: object
+      properties:
+        indicator:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high]
+      required: [indicator, message, severity]
+
+    ImageAnalysis:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 100
+        confidenceLevel:
+          $ref: "#/components/schemas/ConfidenceLevel"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImageAnalysisResult"
+        overallWellness:
+          type: string
+        disclaimer:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, confidence, confidenceLevel, results, overallWellness, disclaimer, createdAt]
+
+    DietSuggestionBody:
+      type: object
+      properties:
+        userId:
+          type: string
+        reportId:
+          type: string
+        conditions:
+          type: array
+          items:
+            type: string
+        preferences:
+          type: string
+      required: [userId]
+
+    DietItem:
+      type: object
+      properties:
+        food:
+          type: string
+        reason:
+          type: string
+        category:
+          type: string
+      required: [food, reason, category]
+
+    DietPlan:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        toEat:
+          type: array
+          items:
+            $ref: "#/components/schemas/DietItem"
+        toAvoid:
+          type: array
+          items:
+            $ref: "#/components/schemas/DietItem"
+        lifestyleTips:
+          type: array
+          items:
+            type: string
+        doctorRecommendation:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, toEat, toAvoid, lifestyleTips, createdAt]
+
+    HistoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        type:
+          type: string
+          enum: [report, image, diet]
+        title:
+          type: string
+        summary:
+          type: string
+        confidence:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        data:
+          type: object
+      required: [id, userId, type, title, summary, createdAt]
+
+    HistoryList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryItem"
+        total:
+          type: integer
+      required: [items, total]
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalAnalyses:
+          type: integer
+        reportsAnalyzed:
+          type: integer
+        imagesAnalyzed:
+          type: integer
+        dietPlansGenerated:
+          type: integer
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/HistoryItem"
+        averageConfidence:
+          type: number
+        alertsCount:
+          type: integer
+      required: [totalAnalyses, reportsAnalyzed, imagesAnalyzed, dietPlansGenerated, recentActivity, averageConfidence, alertsCount]
+
+    PdfReport:
+      type: object
+      properties:
+        downloadUrl:
+          type: string
+        reportId:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+      required: [downloadUrl, reportId, generatedAt]
+
+    PushSubscribeBody:
+      type: object
+      properties:
+        endpoint:
+          type: string
+        p256dh:
+          type: string
+        auth:
+          type: string
+        userId:
+          type: string
+      required: [endpoint, p256dh, auth]
+
+    PushUnsubscribeBody:
+      type: object
+      properties:
+        endpoint:
+          type: string
+      required: [endpoint]
+
+    VapidKeyResponse:
+      type: object
+      properties:
+        publicKey:
+          type: string
+      required: [publicKey]
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success]
+
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+      required: [role, content]
+
+    SendChatMessageBody:
+      type: object
+      properties:
+        userId:
+          type: string
+        message:
+          type: string
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+      required: [userId, message]
+
+    ChatResponse:
+      type: object
+      properties:
+        reply:
+          type: string
+        disclaimer:
+          type: string
+      required: [reply, disclaimer]
